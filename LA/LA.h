@@ -4,13 +4,14 @@
 #include <string>
 #include <utility>
 #include <set>
+#include <map>
 
 namespace LA {
     class Visitor;
 
     enum Operator { op_plus, op_minus, op_mult, op_and, op_lshift, op_rshift, op_inc, op_dec };
     enum LogicOperator { cmp_lt, cmp_le, cmp_eq, cmp_ge, cmp_gt };
-    enum DataTypes {int64, tensor, tuple, code};
+    enum DataType {type_void, int64, tensor, tuple, code};
 
     class Item {
         public:
@@ -35,6 +36,15 @@ namespace LA {
             std::string label;
     };
 
+    class Type : public Item {
+        public:
+            Type(DataType t);
+            DataType get(void);
+            std::string toString(void) override;
+        private:
+            DataType type;
+    };
+
     class Variable : public Item {
         public:
             Variable(std::string name);
@@ -44,65 +54,67 @@ namespace LA {
             std::string name;
     };
 
+    class Integer : public Variable {
+        public:
+            Integer(std::string name) : Variable(name) {};
+    };
+
     class Tensor : public Variable {
         public:
-            Tensor(std::string name);
-            std::string get(void);
-            std::string toString(void) override;
+            Tensor(std::string name, int64_t rank);
         private:
             std::string name;
+            int64_t rank;
     };
 
     class Tuple : public Variable {
         public:
-            Tuple(std::string name);
-            std::string get(void);
+            Tuple(std::string name) : Variable(name) {};
             std::string toString(void) override;
-        private:
-            std::string name;
     };
 
     class Code : public Variable {
         public:
-            Code(std::string name);
-            std::string get(void);
+            Code(std::string name) : Variable(name) {};
             std::string toString(void) override;
-        private:
-            std::string name;
     };
-
 
     class Instruction {
         public:
-            std::set<Instruction*> predecessors;
-            std::set<Instruction*> successors;
-
-            std::set<Variable*> uses;
-            std::set<Variable*> defs;
-
             virtual std::string toString(void) = 0;
             virtual void accept(Visitor visitor) = 0;
     };
 
+    class Instruction_declare : public Instruction {
+        public:
+            Instruction_declare(Variable* v, DataType t);
+            Variable* getVar(void);
+            DataType getType(void);
+            std::string toString(void) override;
+        private:
+            Variable* var;
+            DataType type;
+    };
+
     class Instruction_assignment : public Instruction {
         public:
-            Instruction_assignment(Item* s, Item* d);
+            Instruction_assignment(Item* s, Variable* d);
             Item* getSrc(void);
             Item* getDst(void);
             std::string toString(void) override;
             void accept(Visitor* visitor) override;
         private:
             Item* src;
-            Item* dst;
+            Variable* dst;
     };
 
     class Instruction_compare : public Instruction {
         public:
-            Instruction_compare(Item* d, Item* l, LogicOperator c, Item* r);
+            Instruction_compare(Variable* d, Item* l, LogicOperator c, Item* r);
             std::string toString(void) override;
             void accept(Visitor* visitor) override;
         private:
-            Item* dst;
+            Variable* dst;
             Item* left;
             LogicOperator cmp;
             Item* right;
@@ -128,21 +140,24 @@ namespace LA {
 
     class Instruction_cjump : public Instruction {
         public:
-            Instruction_cjump(Item* l, LogicOperator c, Item* r, Label* label);
+            Instruction_cjump(Item* t, Label* l1, Label* l2);
             std::string toString(void) override;
             void accept(Visitor* visitor) override;
         private:
-            Item* left;
-            Item* right;
-            LogicOperator cmp;
-            Label* label;
+            Item* t;
+            Label* l1;
+            Label* l2;
     };
 
     class Instruction_return : public Instruction {
         public:
-            Instruction_return();
+            Instruction_return(void);
+            Instruction_return(Item* v);
             std::string toString(void) override;
             void accept(Visitor* visitor) override;
+
+        private:
+            Item* src;
     };
 
     class Instruction_assignToTensor : public Instruction {
@@ -190,57 +205,45 @@ namespace LA {
     
     class Instruction_assignFromCall : public Instruction {
         public:
-            Instruction_assignFromCall();
+            Instruction_assignFromCall(Variable* dst, Item* callee, std::vector<Item*> args);
             std::string toString(void) override;
             void accept(Visitor* visitor) override;
         private:
+            Variable* dst;
+            Item* callee;
+            std::vector<Item*> args;
     };
 
     class Instruction_newArray : public Instruction {
         public:
-            Instruction_newArray(std::vector<int> dims);
+            Instruction_newArray(Variable* dst, std::vector<Item*> dims);
             std::string toString(void) override;
             void accept(Visitor* visitor) override;
         private:
-            std::vector<int> dims
+            Variable* dst;
+            std::vector<Item*> dims
     };
 
     class Instruction_newTuple : public Instruction {
         public:
-            Instruction_newTuple(int64_t size);
+            Instruction_newTuple(Variable* dst, Item* size);
             std::string toString(void) override;
             void accept(Visitor* visitor) override;
         private:
-            int64_t size;
-    };
-
-    class Instruction_input : public Instruction {
-        public:
-            Instruction_input();
-            std::string toString(void) override;
-            void accept(Visitor* visitor) override;
-    };
-
-    class Instruction_print : public Instruction {
-        public:
-            Instruction_print();
-            std::string toString(void) override;
-            void accept(Visitor* visitor) override;
+            Variable* dst;
+            Item* size;
     };
 
     class Function {
         public:
             std::string name;
+            DataType returnType;
             std::vector<Variable*> args;
             std::vector<Instruction*> instructions;
+            std::map<std::string, Variable*> variables;
 
-            void computeCFG(void);
-            void computeUseDefs(void);
-
-            Variable* newVariable();
-            Tensor* newTensor();
-            Tuple* newTuple();
-            Code* newCode();
+            Variable* newVariable(DataType t, std::string name, int64_t rank = 0);
+            Variable* getVariable(std::string name);
 
             std::string toString(void);
     };
@@ -268,7 +271,5 @@ namespace LA {
             virtual void visit(Instruction_assignFromCall* inst) = 0;
             virtual void visit(Instruction_newArray* inst) = 0;
             virtual void visit(Instruction_newTuple* inst) = 0;
-            virtual void visit(Instruction_input* inst) = 0;
-            virtual void visit(Instruction_print* inst) = 0;
     };
 }
