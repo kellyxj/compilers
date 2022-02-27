@@ -26,7 +26,7 @@ int main(
     int argc,
     char** argv
 ) {
-    auto enable_code_generator = false;
+    auto enable_code_generator = true;
     int32_t optLevel = 0;
     bool verbose;
 
@@ -67,9 +67,7 @@ int main(
      * Print the source program.
      */
     if (verbose) {
-        for (auto f : p.functions) {
-            std::cout << f->toString();
-        }
+        std::cout << p.toString();
     }
 
     if (enable_code_generator) {
