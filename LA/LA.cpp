@@ -193,6 +193,15 @@ namespace LA {
         this->args = args;
         this->src = src;
     }
+    Item* Instruction_assignToTensor::getSrc() {
+        return this->src;
+    }
+    std::vector<Item*> Instruction_assignToTensor::getArgs() {
+        return this->args;
+    }
+    Variable* Instruction_assignToTensor::getDst() {
+        return this->dst;
+    }
     std::string Instruction_assignToTensor::toString(void) {
         std::string outputString;
         outputString += this->dst->toString();
@@ -212,6 +221,15 @@ namespace LA {
         this->dst = dst;
         this->args = args;
         this->src = src;
+    }
+    Variable* Instruction_assignFromTensor::getSrc() {
+        return this->src;
+    }
+    std::vector<Item*> Instruction_assignFromTensor::getArgs() {
+        return this->args;
+    }
+    Variable* Instruction_assignFromTensor::getDst() {
+        return this->dst;
     }
     std::string Instruction_assignFromTensor::toString(void) {
         std::string outputString;
@@ -341,6 +359,41 @@ namespace LA {
         visitor->visit(this);
     }
 
+    Instruction_tensor_error::Instruction_tensor_error(Item* arg) {
+        this->arg = arg;
+    }
+    std::string Instruction_tensor_error::toString() {
+        return "tensor-error(" + this->arg->toString() + ")";
+    }
+    void Instruction_tensor_error::accept(Visitor* visitor) {
+        visitor->visit(this);
+    }
+
+    Instruction_tensor_error3::Instruction_tensor_error3(Item* arg1, Item* arg2, Item* arg3) {
+        this->arg1 = arg1;
+        this->arg2 = arg2;
+        this->arg3 = arg3;
+    }
+    std::string Instruction_tensor_error3::toString() {
+        return "tensor-error(" + this->arg1->toString() + ", " + this->arg2->toString() + ", " + this->arg3->toString() + ")";
+    }
+    void Instruction_tensor_error3::accept(Visitor* visitor) {
+        visitor->visit(this);
+    }
+
+    Instruction_tensor_error4::Instruction_tensor_error4(Item* arg1, Item* arg2, Item* arg3, Item* arg4) {
+        this->arg1 = arg1;
+        this->arg2 = arg2;
+        this->arg3 = arg3;
+        this->arg4 = arg4;
+    }
+    std::string Instruction_tensor_error4::toString() {
+        return "tensor-error(" + this->arg1->toString() + ", " + this->arg2->toString() + ", " + this->arg3->toString() + ", " + this->arg4->toString() + ")";
+    }
+    void Instruction_tensor_error4::accept(Visitor* visitor) {
+        visitor->visit(this);
+    }
+
     std::string Function::toString() {
         std::string output = " ";
         output += this->returnType->toString() + " ";
@@ -371,8 +424,45 @@ namespace LA {
             return v;
         }
     }
-    Variable* Function::getVariable(std::string name) {
-        return NULL;
+    Label* Function::newLabel(std::string name) {
+        
+        if (this->labels.find(name) != this->labels.end()) {
+            return this->labels[name];
+        }
+        else {
+            Label* l = new Label(name);
+            this->labels.insert(std::make_pair(name, l));
+            return l;
+        }
+    }
+
+    Variable* Function::makeVariable() {
+        std::size_t longest = 0;
+        std::string longestName = "";
+        int count = 0;
+        for (auto var : this->variables) {
+            if (var.first.length() > longest) {
+                longest = var.first.length();
+                longestName = var.first;
+            }
+            count++;
+        }
+        auto v = this->newVariable(longestName + "_g");
+        return v;
+    }
+    Label* Function::makeLabel() {
+        std::size_t longest = 0;
+        std::string longestName = "";
+        int count = 0;
+        for (auto label : this->labels) {
+            if (label.first.length() > longest) {
+                longest = label.first.length();
+                longestName = label.first;
+            }
+            count++;
+        }
+        auto l = this->newLabel(longestName + "_g");
+        return l;
     }
 
     std::string Program::toString() {

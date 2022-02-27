@@ -174,6 +174,9 @@ namespace LA {
     class Instruction_assignToTensor : public Instruction {
         public:
             Instruction_assignToTensor(Variable* dst, std::vector<Item*> args, Item* src);
+            Variable* getDst(void);
+            std::vector<Item*> getArgs(void);
+            Item* getSrc(void);
             std::string toString(void) override;
             void accept(Visitor* visitor) override;
         private:
@@ -185,6 +188,9 @@ namespace LA {
     class Instruction_assignFromTensor : public Instruction {
         public:
             Instruction_assignFromTensor(Variable* dst, std::vector<Item*> args, Variable* src);
+            Variable* getDst(void);
+            std::vector<Item*> getArgs(void);
+            Variable* getSrc(void);
             std::string toString(void) override;
             void accept(Visitor* visitor) override;
         private:
@@ -263,6 +269,39 @@ namespace LA {
             Item* dst;
     };
 
+    //Not part of LA, so not included in the parser. Only used in code generation
+    class Instruction_tensor_error : public Instruction {
+        public:
+            Instruction_tensor_error(Item* arg);
+            std::string toString(void) override;
+            void accept(Visitor* visitor) override;
+        private:
+            Item* arg;
+    };
+
+    class Instruction_tensor_error3 : public Instruction {
+        public:
+            Instruction_tensor_error3(Item* arg1, Item* arg2, Item* arg3);
+            std::string toString(void) override;
+            void accept(Visitor* visitor) override;
+        private:
+            Item* arg1;
+            Item* arg2;
+            Item* arg3;
+    };
+
+    class Instruction_tensor_error4 : public Instruction {
+        public:
+            Instruction_tensor_error4(Item* arg1, Item* arg2, Item* arg3, Item* arg4);
+            std::string toString(void) override;
+            void accept(Visitor* visitor) override;
+        private:
+            Item* arg1;
+            Item* arg2;
+            Item* arg3;
+            Item* arg4;
+    };
+
     class Function {
         public:
             std::string name;
@@ -271,16 +310,22 @@ namespace LA {
             std::vector<Type*> types;
             std::vector<Instruction*> instructions;
             std::map<std::string, Variable*> variables;
+            std::map<std::string, Label*> labels;
 
             Variable* newVariable(std::string name, bool isCallee = false);
-            Variable* getVariable(std::string name);
+            Label* newLabel(std::string l);
+
+            //makes a new variable name that hasn't been used yet
+            Variable* makeVariable(void);
+            //makes a new label that hasn't been used yet
+            Label* makeLabel(void);
 
             std::string toString(void);
     };
     
     class Program {
         public:
-            std::string entryPointLabel;
+            std::string entryPoint;
             std::vector<Function*> functions;
 
             std::string toString(void);
@@ -305,5 +350,9 @@ namespace LA {
             virtual void visit(Instruction_newTuple* inst) = 0;
             virtual void visit(Instruction_print* inst) = 0;
             virtual void visit(Instruction_input* inst) = 0;
+
+            virtual void visit(Instruction_tensor_error* inst) = 0;
+            virtual void visit(Instruction_tensor_error3* inst) = 0;
+            virtual void visit(Instruction_tensor_error4* inst) = 0;
     };
 }

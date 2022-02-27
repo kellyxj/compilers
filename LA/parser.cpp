@@ -467,8 +467,6 @@ namespace LA {
             pegtl::seq<pegtl::at<Instruction_label_rule>, Instruction_label_rule>,
             pegtl::seq<pegtl::at<Instruction_goto_rule>, Instruction_goto_rule>,
             pegtl::seq<pegtl::at<Instruction_cjump_rule>, Instruction_cjump_rule>,
-            pegtl::seq<pegtl::at<Instruction_return_rule>, Instruction_return_rule>,
-            pegtl::seq<pegtl::at<Instruction_empty_return_rule>, Instruction_empty_return_rule>,
             pegtl::seq<pegtl::at<Instruction_assignToTensor_rule>, Instruction_assignToTensor_rule>,
             pegtl::seq<pegtl::at<Instruction_assignFromTensor_rule>, Instruction_assignFromTensor_rule>,
             pegtl::seq<pegtl::at<Instruction_length_rule>, Instruction_length_rule>,
@@ -478,7 +476,9 @@ namespace LA {
             pegtl::seq<pegtl::at<Instruction_assignFromCall_rule>, Instruction_assignFromCall_rule>,
             pegtl::seq<pegtl::at<Instruction_newArray_rule>, Instruction_newArray_rule>,
             pegtl::seq<pegtl::at<Instruction_newTuple_rule>, Instruction_newTuple_rule>,
-            pegtl::seq<pegtl::at<Instruction_assignment_rule>, Instruction_assignment_rule>
+            pegtl::seq<pegtl::at<Instruction_assignment_rule>, Instruction_assignment_rule>,
+            pegtl::seq<pegtl::at<Instruction_return_rule>, Instruction_return_rule>,
+            pegtl::seq<pegtl::at<Instruction_empty_return_rule>, Instruction_empty_return_rule>
         > {};
 
     struct Instructions_rule :
@@ -607,7 +607,8 @@ namespace LA {
     template<> struct action <Label_rule> {
         template<typename Input>
         static void apply(const Input& in, Program& p) {
-            Label* l = new Label(in.string());
+            auto currentF = p.functions.back();
+            Label* l = currentF->newLabel(in.string());
 
             parsed_items.push_back(l);
         }
@@ -744,7 +745,7 @@ namespace LA {
         template <typename Input>
         static void apply(const Input& in, Program& p) {
             auto currentF = p.functions.back();
-            Label* l = new Label(in.string());
+            Label* l = currentF->newLabel(in.string());
 
             auto i = new Instruction_label(l);
             i->setLineNumber(in.position().line);
@@ -990,6 +991,7 @@ namespace LA {
 
         file_input<> fileInput(fileName);
         Program p;
+        p.entryPoint = "main";
         parse<grammar, action>(fileInput, p);
         return p;
     }
